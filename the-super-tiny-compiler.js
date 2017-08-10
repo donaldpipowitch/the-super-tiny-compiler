@@ -725,7 +725,7 @@ function parser(tokens) {
 
 // So we define a traverser function which accepts an AST and a
 // visitor. Inside we're going to define two functions...
-function traverser(ast, visitor) {
+function traverser(ast, visitor, context) {
 
   // A `traverseArray` function that will allow us to iterate over an array and
   // call the next function that we will define: `traverseNode`.
@@ -746,7 +746,7 @@ function traverser(ast, visitor) {
     // If there is an `enter` method for this node type we'll call it with the
     // `node` and its `parent`.
     if (methods && methods.enter) {
-      methods.enter(node, parent);
+      methods.enter(node, parent, context);
     }
 
     // Next we are going to split things up by the current node type.
@@ -782,7 +782,7 @@ function traverser(ast, visitor) {
     // If there is an `exit` method for this node type we'll call it with the
     // `node` and its `parent`.
     if (methods && methods.exit) {
-      methods.exit(node, parent);
+      methods.exit(node, parent, context);
     }
   }
 
@@ -849,14 +849,11 @@ function transformer(ast) {
     body: [],
   };
 
-  // Next I'm going to cheat a little and create a bit of a hack. We're going to
-  // use a property named `context` on our parent nodes that we're going to push
-  // nodes to their parent's `context`. Normally you would have a better
-  // abstraction than this, but for our purposes this keeps things simple.
-  //
-  // Just take note that the context is a reference *from* the old ast *to* the
-  // new ast.
-  ast._context = newAst.body;
+  // We're going to use an object named `context` where we can push our nodes to.
+  // This `context` is passed to our `traver` and the `enter` and `exit` handler.
+  let context = {
+    nodes: newAst.body
+  };
 
   // We'll start by calling the traverser function with our ast and a visitor.
   traverser(ast, {
@@ -864,10 +861,10 @@ function transformer(ast) {
     // The first visitor method accepts any `NumberLiteral`
     NumberLiteral: {
       // We'll visit them on enter.
-      enter(node, parent) {
+      enter(node, parent, context) {
         // We'll create a new node also named `NumberLiteral` that we will push to
         // the parent context.
-        parent._context.push({
+        context.nodes.push({
           type: 'NumberLiteral',
           value: node.value,
         });
@@ -876,8 +873,8 @@ function transformer(ast) {
 
     // Next we have `StringLiteral`
     StringLiteral: {
-      enter(node, parent) {
-        parent._context.push({
+      enter(node, parent, context) {
+        context.nodes.push({
           type: 'StringLiteral',
           value: node.value,
         });
@@ -886,7 +883,7 @@ function transformer(ast) {
 
     // Next up, `CallExpression`.
     CallExpression: {
-      enter(node, parent) {
+      enter(node, parent, context) {
 
         // We start creating a new node `CallExpression` with a nested
         // `Identifier`.
@@ -902,7 +899,8 @@ function transformer(ast) {
         // Next we're going to define a new context on the original
         // `CallExpression` node that will reference the `expression`'s arguments
         // so that we can push arguments.
-        node._context = expression.arguments;
+        let parentNodes = context.nodes;
+        context.nodes = expression.arguments;
 
         // Then we're going to check if the parent node is a `CallExpression`.
         // If it is not...
@@ -919,10 +917,10 @@ function transformer(ast) {
 
         // Last, we push our (possibly wrapped) `CallExpression` to the `parent`'s
         // `context`.
-        parent._context.push(expression);
+        parentNodes.push(expression);
       },
     }
-  });
+  }, context);
 
   // At the end of our transformer function we'll return the new ast that we
   // just created.
