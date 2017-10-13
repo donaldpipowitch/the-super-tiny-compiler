@@ -41,7 +41,7 @@ watch/star this repo or follow me on
 
 ### Tests
 
-Run with `node test.js`
+Run with `yarn && yarn test`
 
 ---
 

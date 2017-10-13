@@ -3,5 +3,12 @@
   "version": "1.0.0",
   "author": "James Kyle <me@thejameskyle.com> (thejameskyle.com)",
   "license": "CC-BY-4.0",
-  "main": "./the-super-tiny-compiler.js"
+  "main": "./the-super-tiny-compiler.js",
+  "scripts": {
+    "test": "tsc && node test"
+  },
+  "devDependencies": {
+    "@types/node": "^8.0.34",
+    "typescript": "^2.5.3"
+  }
 }
